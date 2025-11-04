@@ -31,6 +31,7 @@ def run_controlnet(condition: np.ndarray, gen_path: Path):
     # Convert numpy image to torch, put on GPU, convert to float, and put channels in front
     control = torch.from_numpy(condition).float().cuda().unsqueeze(0) / 255.0
     control = einops.rearrange(control, 'b h w c -> b c h w')# TODO no need to clone right? .clone()
+    _, _, cond_h, cond_w = control.shape
 
     seed = config.seed
     if seed == -1: 
@@ -48,7 +49,8 @@ def run_controlnet(condition: np.ndarray, gen_path: Path):
     # prepare control signals 
     cond = {"c_concat": [control], "c_crossattn": [model.get_learned_conditioning([positive_prompt])]}
     un_cond = {"c_concat": None if config.guess_mode else [control], "c_crossattn": [model.get_learned_conditioning([config.n_prompt])]}
-    shape = (4, config.image_resolution // 8, config.image_resolution // 8)
+    # shape = (4, config.image_resolution // 8, config.image_resolution // 8)
+    shape = (4, cond_h // 8, cond_w // 8)
 
     if config.save_memory:
         model.low_vram_shift(is_diffusing=True)
