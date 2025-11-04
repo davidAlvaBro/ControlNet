@@ -1,1 +1,16 @@
-save_memory = False
+save_memory = True
+prompt = "Two men with black hair in gray suits facing the same way, standing slightly apart, located on an empty street"
+a_prompt = "muted colors, single everyday image, this photo is part of collection where these people are being photographed from all angles" # TODO only add "surveillance view" when the camera angle is high
+surveillance_prompt = ", surveillance view"
+n_prompt = "extra fingers, too few fingers, bad quality, worst quality"
+batch_size = 1
+image_resolution = 512
+ddim_steps = 50 
+guess_mode = False 
+surveillance_view = False
+strength = 1.0 
+scale = 9.0 
+seed = 420 
+eta = 0.0
+model_config_path = './models/cldm_v15.yaml'
+model_checkpoint_path = './models/control_sd15_openpose.pth'
