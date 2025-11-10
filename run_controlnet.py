@@ -120,7 +120,9 @@ if __name__ == "__main__":
 
     ref_num = metadata["ref"]
     ref_frame = metadata["frames"][ref_num]
-    canvas, metadata["frames"][ref_num] = get_annotation(annotations_path=anno_path, frame=ref_frame)
+    canvas, frame = get_annotation(annotations_path=anno_path, frame=ref_frame)
+    metadata["frames"][ref_num] = frame 
+    metadata["trajectory"][metadata["trajectory_ref"]] = frame
     generated_path = out_imgs_path / metadata["frames"][ref_num]["file_path"]
     generated_path.parent.mkdir(parents=True, exist_ok=True)
 
