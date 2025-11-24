@@ -101,6 +101,9 @@ if __name__ == "__main__":
         # metadata["frames"][ref_num] = frame 
         # metadata["trajectory"][metadata["trajectory_ref"]] = frame
 
+    metadata["frames"] = metadata.pop("trajectory")
+    metadata["ref"] = metadata.pop("trajectory_ref")
+    
     with open(out_json_path, "w", encoding="utf-8") as f:
         json.dump(metadata, f, ensure_ascii=False, indent=2)
 
