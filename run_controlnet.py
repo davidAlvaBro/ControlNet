@@ -70,46 +70,15 @@ def run_controlnet(condition: np.ndarray, gen_path: Path):
     
     cv2.imwrite(str(gen_path), cv2.cvtColor(final_image, cv2.COLOR_RGB2BGR))
 
-    # No need to do minibatching in the pipeline as I am only interested in one image 
-    # final_images = (einops.rearrange(final_images, 'b c h w -> b h w c') * 127.5 + 127.5).cpu().numpy().clip(0, 255).astype(np.uint8)# go through the control conditions in a "minibatch" manner 
-    # n_images_to_generate = len(control)
-    # surveillance_prompts = ["", surveillance_prompt]*((1+n_images_to_generate)//2)# TODO fix this hard coded 
-    # indices = list(range(n_images_to_generate))
-    # final_images = torch.zeros((n_images_to_generate, 3, image_resolution, image_resolution), device=control.device)
-    # for start in range(0, n_images_to_generate, batch_size):
-    #     batch = indices[start:start + batch_size] 
-    #     positive_prompts = [prompt + ', ' + a_prompt + surveillance_prompts[i] for i in batch]
-
-    #     if config.save_memory:
-    #         model.low_vram_shift(is_diffusing=False)
-    #     # prepare control signals 
-    #     cond = {"c_concat": [control[batch]], "c_crossattn": [model.get_learned_conditioning(positive_prompts)]}
-    #     un_cond = {"c_concat": None if guess_mode else [control[batch]], "c_crossattn": [model.get_learned_conditioning([n_prompt] * batch_size)]}
-    #     shape = (4, image_resolution // 8, image_resolution // 8)
-
-    #     if config.save_memory:
-    #         model.low_vram_shift(is_diffusing=True)
-    #     # sample the ddim steps and apply the diffusing unet
-    #     model.control_scales = [strength * (0.825 ** float(12 - i)) for i in range(13)] if guess_mode else ([strength] * 13)  # Magic number. IDK why. Perhaps because 0.825**12<0.01 but 0.826**12>0.01
-    #     samples, intermediates = ddim_sampler.sample(ddim_steps, batch_size,
-    #                                                     shape, cond, verbose=False, eta=eta,
-    #                                                     unconditional_guidance_scale=scale,
-    #                                                     unconditional_conditioning=un_cond)
-
-    #     if config.save_memory:
-    #         model.low_vram_shift(is_diffusing=False)
-    #     # use the vae-decoder and get back to images 
-    #     x_samples = model.decode_first_stage(samples)
-
-    #     final_images[batch] = x_samples
 
 if __name__ == "__main__": 
     parser = argparse.ArgumentParser(description="Apply pose controlnet on the reference image and save it for lifting pipeline.")
     parser.add_argument("--data-dir", default="/data/test", type=str, help="Path to folder where images will be stored in the folder 'images'.")
+    parser.add_argument("--adjust-all", action="store_true", help="If all frames needs to zoom in on the annotation.")
     args = parser.parse_args()
     data_dir = Path(args.data_dir) 
 
-    anno_path = data_dir / "images"/ "gt_annotation.npz"
+    anno_path = data_dir / "gt_annotation.npz"
     metadata_path = data_dir / "transforms.json"
     out_json_path = data_dir / "controlnet/transforms.json"
     out_imgs_path = data_dir / "controlnet"
@@ -118,29 +87,22 @@ if __name__ == "__main__":
     with open(metadata_path, "r") as f:
         metadata = json.load(f)
 
-    ref_num = metadata["ref"]
-    ref_frame = metadata["frames"][ref_num]
-    canvas, frame = get_annotation(annotations_path=anno_path, frame=ref_frame)
-    metadata["frames"][ref_num] = frame 
-    metadata["trajectory"][metadata["trajectory_ref"]] = frame
-    generated_path = out_imgs_path / metadata["frames"][ref_num]["file_path"]
-    generated_path.parent.mkdir(parents=True, exist_ok=True)
+    trajectory = metadata["trajectory"]
+    reference_frame_idx = metadata["trajectory_ref"]
+
+    for idx in range(len(trajectory)):
+        if not (idx == reference_frame_idx or args.adjust_all):
+            continue
+        canvas, trajectory[idx] = get_annotation(annotations_path=anno_path, frame=trajectory[idx])
+        if idx == reference_frame_idx: 
+            generated_path = out_imgs_path / trajectory[idx]["file_path"]
+            generated_path.parent.mkdir(parents=True, exist_ok=True)
+            run_controlnet(condition=canvas, gen_path=generated_path)
+        # metadata["frames"][ref_num] = frame 
+        # metadata["trajectory"][metadata["trajectory_ref"]] = frame
 
     with open(out_json_path, "w", encoding="utf-8") as f:
         json.dump(metadata, f, ensure_ascii=False, indent=2)
 
-    run_controlnet(condition=canvas, gen_path=generated_path)
 
     
-
-
-# TODO beter way of doing the forloop with mini batches: 
-# def batched(iterable, n):
-#     if n <= 0:
-#         raise ValueError("batch size must be > 0")
-#     for i in range(0, len(iterable), n):
-#         yield iterable[i:i+n]
-
-# for batch in batched(indices, batch_size):
-#     # do your diffusion step here with this mini-batch
-#     pass
