@@ -10,7 +10,7 @@ import numpy as np
 import einops
 import torch
 
-from prepare_labels import get_annotation
+from prepare_labels import get_annotations
 from pytorch_lightning import seed_everything
 from cldm.model import create_model, load_state_dict
 from cldm.ddim_hacked import DDIMSampler
@@ -90,16 +90,10 @@ if __name__ == "__main__":
     trajectory = metadata["trajectory"]
     reference_frame_idx = metadata["trajectory_ref"]
 
-    for idx in range(len(trajectory)):
-        if not (idx == reference_frame_idx or args.adjust_all):
-            continue
-        canvas, trajectory[idx] = get_annotation(annotations_path=anno_path, frame=trajectory[idx])
-        if idx == reference_frame_idx: 
-            generated_path = out_imgs_path / trajectory[idx]["file_path"]
-            generated_path.parent.mkdir(parents=True, exist_ok=True)
-            run_controlnet(condition=canvas, gen_path=generated_path)
-        # metadata["frames"][ref_num] = frame 
-        # metadata["trajectory"][metadata["trajectory_ref"]] = frame
+    trajectory = get_annotations(annotations_path=anno_path, working_dir=out_imgs_path, frames=trajectory, resolution=512, zoom_in=True)
+    annotation  = cv2.imread(trajectory[reference_frame_idx]["annotation_path"])
+    generated_path = out_imgs_path / trajectory[reference_frame_idx]["file_path"]
+    run_controlnet(condition=annotation, gen_path=generated_path)
 
     metadata["frames"] = metadata.pop("trajectory")
     metadata["ref"] = metadata.pop("trajectory_ref")
