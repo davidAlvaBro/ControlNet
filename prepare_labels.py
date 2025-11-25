@@ -88,14 +88,17 @@ def focus_on_annotation(candidate, give:float=0.1):
     max_xy = candidate[:, :2].max(axis=0) # First entry is max x (width), second max y (height) 
     min_xy = candidate[:, :2].min(axis=0)
     dif_xy = (max_xy - min_xy)
+    max_dif = max(dif_xy)
+    give = max_dif * give + np.clip(dif_xy - dif_xy[::-1], a_min=0, a_max=np.inf)  
+
     # Move all points so the minimum is at the origin - then add a small give 
-    candidate[:, :2] = candidate[:, :2] - min_xy + dif_xy*give
+    candidate[:, :2] = candidate[:, :2] - min_xy + give
     # The resolution of the new image will be 
     resolution = dif_xy*(1 + 2*give)
-    min_x = min_xy[0] - dif_xy[0]*give 
-    min_y = min_xy[1] - dif_xy[1]*give
-    max_x = max_xy[0] + dif_xy[0]*give 
-    max_y = max_xy[1] + dif_xy[1]*give 
+    min_x = min_xy[0] - give[0] 
+    min_y = min_xy[1] - give[1]
+    max_x = max_xy[0] + give[0] 
+    max_y = max_xy[1] + give[1] 
 
     # Distance is large between min and max in second column indicating these are y-values
     # However Height of an image is first           width is second 
