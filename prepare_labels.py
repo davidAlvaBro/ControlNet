@@ -136,6 +136,8 @@ def get_annotations(annotations_path: Path, working_dir: Path, frames: dict, res
     """
     Loads all annotations, produces the annotation map and corrects camera intrinsics if 'zoom_in' is on
     """
+    # minimum padding should be in some config
+    min_pad = 50
     # Ensure that annotations folder exists 
     (working_dir / "annotations").mkdir(parents=True, exist_ok=True)
 
@@ -178,13 +180,12 @@ def get_annotations(annotations_path: Path, working_dir: Path, frames: dict, res
     
     # Controlnet has difficulty generating people that are small - far away 
     if zoom_in: 
-        # minimum padding should be in some config
-        crop_shape = np.array([max_dif_x + 20 , max_dif_y + 20])
+        crop_shape = np.array([max_dif_x + min_pad , max_dif_y + min_pad])
         # TODO : check that this updates the big dict
         for _, value in frame_dict.items():
             total_padding = crop_shape - (value["max"] - value["min"]) 
             value["candidates"][:,:2] = value["candidates"][:,:2] - value["min"] + total_padding/2
-            value["origin_x"], value["origin_y"] = total_padding/2 - value["min"]
+            value["origin_x"], value["origin_y"] = value["min"] - total_padding/2
             value["h"] = crop_shape[1]
             value["w"] = crop_shape[0]
 
